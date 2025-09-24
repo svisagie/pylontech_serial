@@ -59,10 +59,26 @@ COPY --from=builder /build/rust_pytes_serial/target/release/rust_pytes_serial /a
 COPY pytes_serial.cfg.example /app/pytes_serial.cfg.example
 
 ENV RUST_LOG=info \
-    PYTES_CFG=/config/pytes_serial.cfg
+    SERIAL_PORT=/dev/ttyUSB0 \
+    SERIAL_BAUDRATE=115200 \
+    READING_FREQ=10 \
+    POWERS=1 \
+    CELLS=16 \
+    DEV_NAME=pytes \
+    MANUFACTURER="PYTES Energy Co.Ltd" \
+    MODEL=E-BOX-48100R \
+    MQTT_ACTIVE=false \
+    MQTT_BROKER=127.0.0.1 \
+    MQTT_PORT=1883 \
+    MQTT_USERNAME= \
+    MQTT_PASSWORD= \
+    CELLS_MONITORING=false \
+    MONITORING_LEVEL=none \
+    PARSING_STAT_INTERVAL=60 \
+    LOGGING_LEVEL=info
 
 # Create default config volume mount point
-VOLUME ["/config"]
+# Removed config volume; configuration now fully via environment variables
 
 # Expose no ports (MQTT is outbound). If you add a metrics server, expose it here.
 # EXPOSE 9100

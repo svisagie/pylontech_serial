@@ -49,3 +49,53 @@ Serial cable must be connected to battery 1 (master).
 A lighter version written in Micropython for ESP32 is available here:[pytes_esp](https://github.com/chinezbrun/pytes_esp)
 
 enjoy
+
+---
+
+## Rust Implementation (Environment-Only Configuration)
+
+The Rust port (`rust_pytes_serial`) no longer uses `pytes_serial.cfg`. All configuration is supplied via environment variables (with sane defaults). This allows containerized deployments without mounting a config file.
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SERIAL_PORT` | `COM3` | Serial device path (e.g. `/dev/ttyUSB0` on Linux). |
+| `SERIAL_BAUDRATE` | `115200` | Serial baud rate. |
+| `READING_FREQ` | `10` | Main loop frequency in seconds (minimum enforced 5). |
+| `POWERS` | `1` | Number of battery packs (power segments) to poll. |
+| `CELLS` | `16` | Number of cells per pack for cell monitoring logic. |
+| `DEV_NAME` | `pytes` | Device base name used in MQTT discovery. |
+| `MANUFACTURER` | `PYTES Energy Co.Ltd` | Manufacturer metadata. |
+| `MODEL` | `E-BOX-48100R` | Model metadata. |
+| `MQTT_ACTIVE` | `false` | Enable MQTT publishing (`true` / `false` / `1`). |
+| `MQTT_BROKER` | `127.0.0.1` | MQTT broker host/IP. |
+| `MQTT_PORT` | `1883` | MQTT broker port. |
+| `MQTT_USERNAME` | (empty) | MQTT username (optional). |
+| `MQTT_PASSWORD` | (empty) | MQTT password (optional). |
+| `CELLS_MONITORING` | `false` | Enable cell polling. |
+| `MONITORING_LEVEL` | `none` | One of `none`, `medium`, `high` (invalid falls back to `none`). |
+| `PARSING_STAT_INTERVAL` | `60` | Seconds between `stat` command polls. |
+| `LOGGING_LEVEL` | `info` | Log level if `RUST_LOG` not set. |
+| `RUST_LOG` | (unset) | Overrides logging filter (standard env_logger syntax). |
+
+### Example (Docker)
+```bash
+docker run --rm \
+   --device=/dev/ttyUSB0 \
+   -e SERIAL_PORT=/dev/ttyUSB0 \
+   -e POWERS=1 -e CELLS=16 \
+   -e MQTT_ACTIVE=true -e MQTT_BROKER=192.168.1.10 \
+   -e LOGGING_LEVEL=debug \
+   ghcr.io/svisagie/pylon_serial:rust-latest
+```
+
+### Mock Mode
+Run with the `--mock` CLI flag to generate synthetic data without a serial device:
+```bash
+./rust_pytes_serial --mock
+```
+
+### Migration Notes
+If you previously used `pytes_serial.cfg`, translate each key to the variable listed above. No file mount is required; remove any `PYTES_CFG` references in your deployment manifests.
+

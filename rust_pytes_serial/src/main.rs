@@ -31,18 +31,19 @@ struct Cli { #[arg(long, help="Run without serial device and generate synthetic 
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
-    let cfg = match AppConfig::load("pytes_serial.cfg") {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("Configuration error: {e}\nPlease ensure 'pytes_serial.cfg' exists in the current directory or a parent directory.");
-            std::process::exit(2);
-        }
-    };
-    // logging level optional from config
-    let level = cfg.logging.logging_level.clone().unwrap_or_else(||"info".into());
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(level)).format_timestamp_secs().init();
+    let cfg = AppConfig::load_env()?;
+    // Determine logging filter: RUST_LOG > LOGGING_LEVEL > info
+    let filter = std::env::var("RUST_LOG").ok()
+        .or_else(|| cfg.logging.logging_level.clone())
+        .unwrap_or_else(|| "info".into());
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(&filter))
+        .format_timestamp_secs()
+        .init();
     info!("START - rust_pytes_serial v0.1.0");
-    info!("Loaded config: serial_port={} baud={} powers={} cells={}", cfg.serial.serial_port, cfg.serial.serial_baudrate, cfg.battery_info.powers, cfg.battery_info.cells);
+    info!("Loaded config: serial_port={} baud={} powers={} cells={} mqtt_active={} broker={} monitoring_level={} stat_interval={}s", 
+        cfg.serial.serial_port, cfg.serial.serial_baudrate, cfg.battery_info.powers, cfg.battery_info.cells,
+        cfg.mqtt.mqtt_active, cfg.mqtt.mqtt_broker, cfg.cells_monitoring.monitoring_level, cfg.stat_parsing.parsing_stat_interval);
+    if cfg.mqtt.mqtt_active { if cfg.mqtt.mqtt_username.is_empty() { info!("MQTT auth: anonymous"); } else { info!("MQTT auth: username provided (password hidden)"); } }
 
     // Serial (skipped in mock)
     let mut serial = if cli.mock { None } else {

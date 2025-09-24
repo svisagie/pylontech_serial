@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  pylon_serial:
+    image: ghcr.io/svisagie/pylon_serial:rust-latest
+    container_name: pylon_serial_rust
+    restart: unless-stopped
+    # Remove command or set [] to ensure real hardware mode (omit --mock)
+    command: []
+    environment:
+      # Serial settings
+      SERIAL_PORT: /dev/ttyUSB0
+      SERIAL_BAUDRATE: 115200
+      READING_FREQ: 10
+      # Battery metadata
+      POWERS: 1
+      CELLS: 16
+      DEV_NAME: pytes
+      MANUFACTURER: "PYTES Energy Co.Ltd"
+      MODEL: E-BOX-48100R
+      # MQTT (set MQTT_ACTIVE=true to enable)
+      MQTT_ACTIVE: "false"
+      MQTT_BROKER: 127.0.0.1
+      MQTT_PORT: 1883
+      MQTT_USERNAME: ""
+      MQTT_PASSWORD: ""
+      # Cells monitoring
+      CELLS_MONITORING: "false"
+      MONITORING_LEVEL: none  # none | medium | high
+      # Stat command interval (seconds)
+      PARSING_STAT_INTERVAL: 60
+      # Logging (RUST_LOG can override this)
+      LOGGING_LEVEL: info
+    devices:
+      - /dev/serial/by-id/usb-Prolific_Technology_Inc._USB-Serial_Controller-if00-port0:/dev/ttyUSB0
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # If permissions issues with serial device, uncomment the following:
+    # user: "0:0"
+
+# To enable TLS image instead, change image to:
+#   ghcr.io/svisagie/pylon_serial:rust-tls-latest
+# To run mock mode, set: command: ["--mock"]
