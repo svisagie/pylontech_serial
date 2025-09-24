@@ -53,13 +53,13 @@ jobs:
           context: .
           file: rust_pytes_serial/Dockerfile.rust
           push: true
-          tags: ghcr.io/svisagie/pylon_serial:rust-latest
+          tags: ghcr.io/svisagie/pylontech_serial:rust-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7
 
       - name: Summary
-        run: echo "Published ghcr.io/svisagie/pylon_serial:rust-latest" >> $GITHUB_STEP_SUMMARY
+        run: echo "Published ghcr.io/svisagie/pylontech_serial:rust-latest" >> $GITHUB_STEP_SUMMARY
 
   done:
     needs: [build-default]
