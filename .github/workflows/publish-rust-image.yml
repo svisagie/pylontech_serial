@@ -56,48 +56,8 @@ jobs:
       - name: Summary
         run: echo "Published ghcr.io/svisagie/pylon_serial:rust-latest" >> $GITHUB_STEP_SUMMARY
 
-  build-tls:
-    name: Build & Push (tls feature)
-    runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.push_tls_variant == 'true'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: List repository root
-        run: |
-          ls -al .
-          echo '---'
-          ls -al rust_pytes_serial || true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build & Push TLS (features=tls)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: rust_pytes_serial/Dockerfile.rust
-          push: true
-          tags: ghcr.io/svisagie/pylon_serial:rust-tls-latest
-          build-args: |
-            FEATURES=tls
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
-
-      - name: Summary
-        run: echo "Published ghcr.io/svisagie/pylon_serial:rust-tls-latest" >> $GITHUB_STEP_SUMMARY
-
   done:
-    needs: [build-default, build-tls]
+    needs: [build-default]
     if: always()
     runs-on: ubuntu-latest
     steps:
