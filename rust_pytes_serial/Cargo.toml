@@ -1,0 +1,23 @@
+[package]
+name = "rust_pytes_serial"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[features]
+default = []
+tls = ["rumqttc/use-rustls"]
+
+[dependencies]
+serialport = "4"
+rumqttc = { version = "0.24", default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+log = "0.4"
+env_logger = "0.11"
+regex = "1"
+chrono = { version = "0.4", features = ["clock", "serde", "std"] }
+parking_lot = "0.12"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "signal"] }
+clap = { version = "4", features = ["derive"] }

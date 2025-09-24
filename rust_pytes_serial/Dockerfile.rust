@@ -1,0 +1,75 @@
+# Multi-stage build for rust_pytes_serial
+# Usage examples:
+#   docker build -f Dockerfile.rust -t rust-pytes:latest .
+#   docker build -f Dockerfile.rust --build-arg FEATURES=tls -t rust-pytes:tls .
+#   docker run --device=/dev/ttyUSB0 -e PYTES_CFG=/config/pytes_serial.cfg -v $(pwd)/pytes_serial.cfg:/config/pytes_serial.cfg rust-pytes:latest
+
+ARG RUST_VERSION=1.81
+ARG DEBIAN_FRONTEND=noninteractive
+ARG FEATURES=""
+
+#############################
+# Builder image
+#############################
+FROM rust:${RUST_VERSION}-slim AS builder
+
+# Install build system deps (libudev for serialport, pkg-config for build scripts)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        pkg-config libudev-dev ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Create a dummy project layer to cache dependencies
+COPY rust_pytes_serial/Cargo.toml rust_pytes_serial/Cargo.lock* ./rust_pytes_serial/
+RUN mkdir -p rust_pytes_serial/src && echo "fn main() {}" > rust_pytes_serial/src/main.rs
+
+# Pre-fetch & compile dependency graph (will be cached until Cargo.toml changes)
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/build/target \
+    cd rust_pytes_serial && cargo build --release ${FEATURES:+--features ${FEATURES}}
+
+# Now copy real sources and build
+COPY rust_pytes_serial/ ./rust_pytes_serial/
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/build/target \
+    cd rust_pytes_serial && cargo build --release ${FEATURES:+--features ${FEATURES}}
+
+#############################
+# Runtime image
+#############################
+FROM debian:stable-slim AS runtime
+
+ARG DEBIAN_FRONTEND=noninteractive
+# Runtime deps for serialport (libudev1) + tzdata for chrono local time if needed
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libudev1 ca-certificates tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user (optional; comment out if direct device access requires root)
+RUN useradd -m -u 10001 appuser || true
+
+WORKDIR /app
+
+# Copy binary
+COPY --from=builder /build/rust_pytes_serial/target/release/rust_pytes_serial /app/rust_pytes_serial
+
+# Copy example config for reference
+COPY pytes_serial.cfg.example /app/pytes_serial.cfg.example
+
+ENV RUST_LOG=info \
+    PYTES_CFG=/config/pytes_serial.cfg
+
+# Create default config volume mount point
+VOLUME ["/config"]
+
+# Expose no ports (MQTT is outbound). If you add a metrics server, expose it here.
+# EXPOSE 9100
+
+# Optionally drop privileges (comment if serial device access fails; then run with --device and --privileged or relevant udev rules)
+USER appuser
+
+ENTRYPOINT ["/app/rust_pytes_serial"]
+# Default args: run with mock mode (override in docker run if you have the hardware)
+CMD ["--mock"]

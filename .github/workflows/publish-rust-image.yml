@@ -1,0 +1,77 @@
+name: Publish Rust Image
+
+on:
+  push:
+    branches: [ main, feature/improvements ]
+    paths:
+      - 'rust_pytes_serial/**'
+      - 'Dockerfile.rust'
+      - '.github/workflows/publish-rust-image.yml'
+  workflow_dispatch:
+    inputs:
+      push_tls_variant:
+        description: 'Also build and push TLS feature variant'
+        required: false
+        default: 'true'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-matrix:
+    name: Build & Push (features=${{ matrix.features || 'none' }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        features: ["", "tls"]
+    # Allow skipping tls variant via manual dispatch input
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.push_tls_variant == 'true' || matrix.features == ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+            registry: ghcr.io
+            username: ${{ github.actor }}
+            password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute tag
+        id: vars
+        run: |
+          if [ "${{ matrix.features }}" = "tls" ]; then
+            echo "tag=ghcr.io/svisagie/pylon_serial:rust-tls-latest" >> $GITHUB_OUTPUT
+          else
+            echo "tag=ghcr.io/svisagie/pylon_serial:rust-latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build & Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.rust
+          push: true
+          tags: ${{ steps.vars.outputs.tag }}
+          build-args: |
+            FEATURES=${{ matrix.features }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # Multi-arch; adjust if not needed
+          platforms: linux/amd64,linux/arm64
+
+      - name: Summary
+        run: |
+          echo "Published ${{ steps.vars.outputs.tag }} (features='${{ matrix.features }}')" >> $GITHUB_STEP_SUMMARY
+
+  # Optional job to mark completion when both variants succeed
+  done:
+    needs: [build-matrix]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "All requested images published." >> $GITHUB_STEP_SUMMARY
