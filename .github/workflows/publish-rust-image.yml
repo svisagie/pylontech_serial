@@ -26,6 +26,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up QEMU (multi-arch emulation)
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm,arm64
+
       - name: List repository root
         run: |
           ls -al .
@@ -42,7 +47,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & Push default (no features)
+      - name: Build & Push default (multi-arch)
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -51,7 +56,7 @@ jobs:
           tags: ghcr.io/svisagie/pylon_serial:rust-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
 
       - name: Summary
         run: echo "Published ghcr.io/svisagie/pylon_serial:rust-latest" >> $GITHUB_STEP_SUMMARY

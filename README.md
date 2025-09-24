@@ -99,3 +99,6 @@ Run with the `--mock` CLI flag to generate synthetic data without a serial devic
 ### Migration Notes
 If you previously used `pytes_serial.cfg`, translate each key to the variable listed above. No file mount is required; remove any `PYTES_CFG` references in your deployment manifests.
 
+### Multi-Architecture Images
+The GitHub Actions workflow builds and publishes a multi-arch image for `linux/amd64`, `linux/arm64` (64‑bit Raspberry Pi), and `linux/arm/v7` (32‑bit Raspberry Pi). Pulling `ghcr.io/svisagie/pylon_serial:rust-latest` on a Pi will automatically select the correct variant.
+
