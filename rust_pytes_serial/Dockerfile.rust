@@ -87,5 +87,3 @@ ENV RUST_LOG=info \
 USER appuser
 
 ENTRYPOINT ["/app/rust_pytes_serial"]
-# Default args: run with mock mode (override in docker run if you have the hardware)
-CMD ["--mock"]
